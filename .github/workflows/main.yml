@@ -34,9 +34,9 @@ jobs:
         run: |
           cd openwrt
           make -j$(nproc) || make -j1 V=s
-
-      - name: 整理并上传固件
-        uses: actions/upload-artifact@v3
+     - name: 整理并上传固件
+        uses: actions/upload-artifact@v4  # 这里改成了 v4
         with:
           name: ImmortalWrt_RAX3000M_Firmware
           path: openwrt/bin/targets/mediatek/filogic/*.bin
+          overwrite: true  # v4 新增参数，如果重名则覆盖
