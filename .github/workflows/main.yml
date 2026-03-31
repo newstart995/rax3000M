@@ -1,0 +1,51 @@
+name: Build ImmortalWrt for RAX3000M
+
+on:
+  repository_dispatch:
+  workflow_dispatch: # 支持手动点击开始编译
+
+env:
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: master
+  CONFIG_FILE: .config # 你放在仓库根目录的配置文件名
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Initialization environment
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL https://raw.githubusercontent.com/P3TERX/Actions-OpenWrt/main/general/depends-ubuntu-2204)
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+
+    - name: Clone source code
+      run: git clone $REPO_URL -b $REPO_BRANCH openwrt
+
+    - name: Update & Install feeds
+      run: cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
+
+    - name: Load custom configuration
+      run: |
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cd openwrt && make defconfig
+
+    - name: Download package
+      run: cd openwrt && make download -j8
+
+    - name: Compile the firmware
+      run: |
+        cd openwrt
+        make -j$(nproc) || make -j1 V=s
+
+    - name: Upload firmware
+      uses: actions/upload-artifact@v3
+      with:
+        name: ImmortalWrt_RAX3000M
+        path: openwrt/bin/targets/mediatek/filogic/*.bin
